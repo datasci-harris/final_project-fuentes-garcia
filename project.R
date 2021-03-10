@@ -15,9 +15,13 @@ setwd(wd)
 ### Data Wrangling ################
 ###################################
 
+# --- Downloading 2020 Presidential Elections Results from Github
 
+if (!file.exists("results_2020.csv"))
+download.file("https://raw.githubusercontent.com/tonmcg/US_County_Level_Election_Results_08-20/master/2020_US_County_Level_Presidential_Results.csv",
+              destfile = "results_2020.csv", mode = "wb")
 
-
+# --- Downloading Previous Results
 
 ###################################
 ### Plotting ######################
