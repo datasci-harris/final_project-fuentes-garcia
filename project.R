@@ -1,6 +1,8 @@
 rm(list=ls())
 
 library(tidyverse)
+library(jsonlite)
+library(lubridate)
 library(tidytext)
 
 # Victor
@@ -36,7 +38,14 @@ download.file("https://raw.githubusercontent.com/tonmcg/US_County_Level_Election
 ### Text Processing ###############
 ###################################
 
+# --- File downloaded from https://www.thetrumparchive.com/
+# --- The FAQ section provides the following Google Drive link
+# --- https://drive.google.com/file/d/16wm-2NTKohhcA26w-kaWfhLIGwl_oX95/view
 
+tweets_df <-
+  fromJSON("tweets_01-08-2021.json") %>%
+  mutate(date = ymd_hms(date)) %>%
+  filter(isRetweet == "f")          # Removing RTs
 
 
 
