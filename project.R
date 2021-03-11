@@ -3,7 +3,11 @@ rm(list=ls())
 library(tidyverse)
 library(jsonlite)
 library(lubridate)
+library(stringi)
 library(tidytext)
+library(reticulate)
+library(spacyr)
+spacy_initialize()  # Please follow CRAN instructions: https://cran.r-project.org/web/packages/spacyr/readme/README.html
 
 # Victor
 wd <- "C:/Users/fuent/OneDrive - The University of Chicago/Winter 2021/Data & Programming II - R/Project/final_project-fuentes-garcia"
@@ -59,9 +63,35 @@ if (!file.exists("covid_approval.csv"))
 
 tweets_df <-
   fromJSON("tweets_01-08-2021.json") %>%
-  mutate(date = ymd_hms(date, tz = "EST")) %>%
-  filter(isRetweet == "f")          # Removing RTs
+  mutate(date = ymd_hms(date, tz = "EST"),
+         text = stri_replace_all_regex(text, "(\\s?)http(s?)://.*$", ""), # Removing URL addresses
+         text = stri_replace_all_fixed(text, c("&amp;"), c("and"))) %>%   # Replacing HTML characters
+  filter(isRetweet == "f", !text == "")                                   # Removing RTs & empty processed tweets
 
+  
+tweets <- tweets_df$text
+list_tweets <- list()
+
+for (i in 1:length(tweets)) {
+  
+  tweet <-
+    tweets_df %>%
+    filter(text == tweets[i]) %>%
+    unnest_tokens(sentence, text, token = "sentences", drop = TRUE)
+  
+  vec_tweet <- tweet$sentence
+  names(vec_tweet) <- 1:length(vec_tweet)
+  
+  list_tweets[[i]] <-
+    spacy_parse(vec_tweet) %>%
+    as.tibble() %>%
+    select(-sentence_id) %>%
+    mutate(tweet = tweets[i])
+    }
+
+words_df <-
+  do.call("rbind", list_tweets) %>%
+  as_tibble() 
 
 ###################################
 ### Analysis ######################
