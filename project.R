@@ -6,18 +6,55 @@ library(lubridate)
 library(stringi)
 library(tidytext)
 library(sf)
-library(urbnmapr)
+library(devtools)
+library(urbnmapr)   # Please use devtools::install_github("UrbanInstitute/urbnmapr")
 library(reticulate)
 library(spacyr)
 spacy_initialize()  # Please follow CRAN instructions: https://cran.r-project.org/web/packages/spacyr/readme/README.html
 
 # Victor
 wd <- "C:/Users/fuent/OneDrive - The University of Chicago/Winter 2021/Data & Programming II - R/Project/final_project-fuentes-garcia"
-
 # Fernando
-wd <- "C:/Users/Nano/Dropbox/My PC (DellXPS13)/Desktop/MPP/R2/final_project-fuentes-garcia"
-
+#wd <- "C:/Users/Nano/Dropbox/My PC (DellXPS13)/Desktop/MPP/R2/final_project-fuentes-garcia"
 setwd(wd)
+
+###################################
+### Downloading Datasets ##########
+###################################
+
+# 1 -- 2020 Presidential Elections Results by Zipcode
+#   -- Data developed usingn The Guardian, townhall.com, Fox News, Politico, and the New York Times
+#   -- More details: https://github.com/tonmcg/US_County_Level_Election_Results_08-20
+
+if (!file.exists("results_2020.csv"))
+  download.file("https://raw.githubusercontent.com/tonmcg/US_County_Level_Election_Results_08-20/master/2020_US_County_Level_Presidential_Results.csv",
+                destfile = "results_2020.csv", mode = "wb")
+
+# 2 -- 1976-2020 Presidential Elections Results by State
+#   -- Dataset from MIT Election Data + Science Lab
+#   -- More details: https://doi.org/10.7910/DVN/42MVDX
+
+
+# 3 -- Coronavirus Polls compiled by FiveThirtyEight about 
+#   -- Trump handling Covid-19 approval rate & People's concern rate about Covid-19
+#   -- More details: https://projects.fivethirtyeight.com/coronavirus-polls/
+
+if (!file.exists("covid-19-polls-master.zip"))
+  download.file("https://projects.fivethirtyeight.com/trump-approval-data/approval_topline.csv",
+                destfile = "covid-19-polls-master.zip", mode = "wb")
+
+# 4 -- Trump Presidential approval rate
+#   -- More details: https://projects.fivethirtyeight.com/trump-approval-ratings/
+
+if (!file.exists("covid_approval.csv"))
+  download.file("https://github.com/fivethirtyeight/covid-19-polls/archive/master.zip",
+                destfile = "covid_approval.csv", mode = "wb")
+
+# 5 -- Trump's Tweets from 2009 to 2021
+#   -- Downloaded file from https://www.thetrumparchive.com/
+#   -- The FAQ section provides the following Google Drive link
+#   -- https://drive.google.com/file/d/16wm-2NTKohhcA26w-kaWfhLIGwl_oX95/view
+
 
 ###################################
 ### Data Wrangling ################
@@ -38,9 +75,6 @@ pres_margin <- presidents %>%
   mutate(margin = round(candidatevotes / totalvotes, 3) * 100)
   
 
-# Urban Institute: https://urbaninstitute.github.io/urbnmapr/
-devtools::install_github("UrbanInstitute/urbnmapr")
-
 states_sf <- get_urbn_map("states", sf = TRUE)
 
 states_sf %>% 
@@ -56,15 +90,8 @@ spatial_data <- left_join(states_sf, pres_margin,
 #  geom_sf(mapping = aes(fill = margin),
 #          color = "#ffffff", size = 0.25) +
 #  labs(fill = "")
-=======
-# --- Downloading 2020 Presidential Elections Results from Github
-
-if (!file.exists("results_2020.csv"))
-download.file("https://raw.githubusercontent.com/tonmcg/US_County_Level_Election_Results_08-20/master/2020_US_County_Level_Presidential_Results.csv",
-              destfile = "results_2020.csv", mode = "wb")
 
 
-# --- Downloading Previous Results
 
 ###################################
 ### Plotting ######################
@@ -78,25 +105,6 @@ download.file("https://raw.githubusercontent.com/tonmcg/US_County_Level_Election
 ###################################
 ### Text Processing ###############
 ###################################
-
-# ---- Downloaded files from FiveThirtyEight about 
-## --- Trump handling Covid-19 approval rate & People's concern rate about Covid-19
-## --- More details: https://projects.fivethirtyeight.com/coronavirus-polls/
-
-if (!file.exists("covid-19-polls-master.zip"))
-  download.file("https://projects.fivethirtyeight.com/trump-approval-data/approval_topline.csv",
-                destfile = "covid-19-polls-master.zip", mode = "wb")
-
-## --- Trump Presidential approval rate
-## --- More details: https://projects.fivethirtyeight.com/trump-approval-ratings/
-
-if (!file.exists("covid_approval.csv"))
-  download.file("https://github.com/fivethirtyeight/covid-19-polls/archive/master.zip",
-                destfile = "covid_approval.csv", mode = "wb")
-
-# ---- Downloaded file from https://www.thetrumparchive.com/
-## --- The FAQ section provides the following Google Drive link
-## --- https://drive.google.com/file/d/16wm-2NTKohhcA26w-kaWfhLIGwl_oX95/view
 
 tweets_df <-
   fromJSON("tweets_01-08-2021.json") %>%
