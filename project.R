@@ -1,4 +1,5 @@
 rm(list=ls())
+options(scipen = 10^6, digits=2)
 
 library(tidyverse)
 library(jsonlite)
@@ -35,40 +36,25 @@ if (!file.exists("results_2020.csv"))
 #   -- Dataset from MIT Election Data + Science Lab
 #   -- More details: https://doi.org/10.7910/DVN/42MVDX
 
+# 3 -- 1980-2020 News Sentiment Analysis
+#   -- Data set from Federal Reserve Bank of San Francisco
+#   -- More details: https://www.frbsf.org/economic-research/indicators-data/daily-news-sentiment-index/
 
-# 3 -- Coronavirus Polls compiled by FiveThirtyEight about 
-#   -- Trump handling Covid-19 approval rate & People's concern rate about Covid-19
-#   -- More details: https://projects.fivethirtyeight.com/coronavirus-polls/
+if (!file.exists("results_2020.csv"))
+  download.file("https://raw.githubusercontent.com/tonmcg/US_County_Level_Election_Results_08-20/master/2020_US_County_Level_Presidential_Results.csv",
+                destfile = "results_2020.csv", mode = "wb")
 
-if (!file.exists("covid-19-polls-master.zip"))
-  download.file("https://github.com/fivethirtyeight/covid-19-polls/archive/master.zip",
-                destfile = "covid-19-polls-master.zip", mode = "wb")
-
-# 4 -- Presidential approval rate: Trump
-#   -- More details: https://projects.fivethirtyeight.com/trump-approval-ratings/
-
-if (!file.exists("president_approval.csv"))
-  download.file("https://projects.fivethirtyeight.com/trump-approval-data/approval_topline.csv",
-                destfile = "president_approval.csv", mode = "wb")
-
-# 5 -- 2020 Elections Forecast
-#   -- More details: https://github.com/fivethirtyeight/data/tree/master/election-forecasts-2020
-
-if (!file.exists("president2020_forecast.csv"))
-  download.file("https://projects.fivethirtyeight.com/2020-general-data/presidential_national_toplines_2020.csv",
-                destfile = "president2020_forecast.csv", mode = "wb")
-
-# 6 -- Trump's Tweets from 2009 to 2021
+# 4 -- Trump's Tweets from 2009 to 2021
 #   -- Downloaded file from https://www.thetrumparchive.com/
 #   -- The FAQ section provides the following Google Drive link
 #   -- https://drive.google.com/file/d/16wm-2NTKohhcA26w-kaWfhLIGwl_oX95/view
 
-# 7 -- AFINN sentiment: New English AFINN wordlist
+# 5 -- AFINN sentiment: New English AFINN wordlist
 #   -- More details: https://github.com/fnielsen/afinn/tree/master/afinn/data
 
-if (!file.exists("AFINN-en-165.txt"))
-  download.file("https://raw.githubusercontent.com/fnielsen/afinn/master/afinn/data/AFINN-en-165.txt",
-                destfile = "AFINN-en-165.txt", mode = "wb")
+if (!file.exists("news_sentiment_data.xlsx"))
+  download.file("https://www.frbsf.org/economic-research/indicators-data/daily-news-sentiment-index/files/news_sentiment_data.xlsx",
+                destfile = "news_sentiment_data.xlsx", mode = "wb")
 
 ###################################
 ### Data Wrangling ################
@@ -120,28 +106,37 @@ spatial_data <- left_join(states_sf, pres_margin,
 ### Text Processing ###############
 ###################################
 
+# Sentiment Analysis of Trump's tweets
+
+## Loading AFINN
 sentiment_afinn <-
   read.delim("AFINN-en-165.txt", header = F) %>%
   as_tibble() %>%
   rename(word = 1, sentiment = 2)
 
-
+## Wrangling set of tweets
 tweets_df <-
   fromJSON("tweets_01-08-2021.json") %>%
-  mutate(date = ymd_hms(date, tz = "EST"),
-         text = stri_replace_all_regex(text, "(\\s?)http(s?)://.*$", ""),      # Removing URL addresses
-         text = str_replace_all(text,                                          # Replacing HTML characters
-                                c("&amp(;|,)?" = "and",
-                                  "@|#|&|%|$" = "",
-                                  "Donald J. Trump" = "Donald J Trump",
-                                  '""' = '',
-                                  "--" = "",
-                                  "\\-+Donald" = "Donald"))) %>%  
-  filter(isRetweet == "f", !text == "", date > ymd("2015-06-01")) %>%          # Removing RTs & empty processed tweets
+  mutate(
+    date = ymd_hms(date, tz = "EST"),
+    text = stri_replace_all_regex(text, "(\\s?)http(s?)://.*$", ""),      # Removing URL addresses
+    text = str_replace_all(text,                                          
+                           c(     "&amp(;|,)?" = "and",               # Replacing HTML characters
+                             '@|#|&|%|$|""|--' = "",                  # Removing symbols
+                             "Donald J. Trump" = "Donald J Trump",    # standardizing Middle Name
+                                  "\\-+Donald" = "Donald"))           # Formatting Trump Self-Cites
+    ) %>%  
+  filter(
+    isRetweet == "f",                                           # Removing RTs
+    !text == "",                                                # Removing empty processed tweets
+    date > ymd("2015-01-01")                                    # Keeping tweets starting in 2015
+    ) %>%          
   arrange(date) %>%
   mutate(tweet_id = row_number()) %>%
   select(tweet_id, date, text, device, favorites)
 
+
+## Constructing list of words from tweets
 tweets <- tweets_df[,c("tweet_id","text")]
 list_tweets <- list()
 
@@ -150,33 +145,56 @@ for (i in 1:nrow(tweets)) {   # ~ Task lasts ~36min
   tweet <-
     tweets_df %>%
     filter(text == tweets$text[i]) %>%
-    unnest_tokens(sentence, text, token = "sentences", drop = TRUE, to_lower = FALSE)
+    unnest_tokens(sentence, text, token = "sentences", drop = TRUE)
   
   vec_tweet <- tweet$sentence
   
   list_tweets[[i]] <-
-    spacy_parse(vec_tweet, entity = FALSE, additional_attributes = c("is_stop")) %>%
+    spacy_parse(vec_tweet, additional_attributes = c("is_stop")) %>%
     as_tibble() %>%
     select(-c(doc_id, token_id)) %>%
     mutate(tweet_id = tweets$tweet_id[i])
 }
 
-words_df <-
+save(list_tweets, file = "list_tweets.RData")
+load("list_tweets.RData")
+
+## Developing sentiment analysis from non-stop words
+trump_sentiment <-
   do.call("rbind", list_tweets) %>%
   as_tibble() %>%
   left_join(tweets_df, by = "tweet_id") %>%
   filter(is_stop == FALSE, !pos == "PUNCT") %>%
   inner_join(sentiment_afinn, by = c("lemma" = "word")) %>%
-  mutate(week = floor_date(date, unit = "weeks")) %>%
-
-weekly_sentiment <-
-  words_df %>%
+  mutate(week = as.Date(floor_date(date, unit = "week"))) %>%
   group_by(week) %>%
-  summarise(sentiment = mean(sentiment, na.rm = TRUE)) %>%
-  ungroup()
+  summarise(value = mean(sentiment, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(subject = "Trump",
+         value = zoo::rollmean(value, k = 4, fill = NA, align = "right"))
 
 remove(tweets, tweet, vec_tweet)
 
+# Sentiment of 16 major US newspapers
+news_sentiment <-
+  readxl::read_excel("news_sentiment_data.xlsx", sheet = "Data") %>%
+  mutate(week = floor_date(ymd(date), unit = "weeks")) %>%
+  rename(sentiment = `News Sentiment`) %>%
+  group_by(week) %>%
+  summarise(value = mean(sentiment, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(subject = "News")
+
+# Merging both sentiments
+
+sentiment_analysis <-
+  rbind(trump_sentiment, news_sentiment) %>%
+  filter(week > ymd("2020-01-01")) %>%
+  group_by(subject) %>%
+  mutate(scaled = scale(value))
+
+ggplot(sentiment_analysis, aes(x = week, y = scaled, color = subject, group = subject)) +
+  geom_line()
 
 ###################################
 ### Analysis ######################
