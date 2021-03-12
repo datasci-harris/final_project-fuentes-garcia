@@ -14,9 +14,9 @@ library(spacyr)
 spacy_initialize()  # Please follow CRAN instructions: https://cran.r-project.org/web/packages/spacyr/readme/README.html
 
 # Victor
-wd <- "C:/Users/fuent/OneDrive - The University of Chicago/Winter 2021/Data & Programming II - R/Project/final_project-fuentes-garcia"
+#wd <- "C:/Users/fuent/OneDrive - The University of Chicago/Winter 2021/Data & Programming II - R/Project/final_project-fuentes-garcia"
 # Fernando
-#wd <- "C:/Users/Nano/Dropbox/My PC (DellXPS13)/Desktop/MPP/R2/final_project-fuentes-garcia"
+wd <- "C:/Users/Nano/Dropbox/My PC (DellXPS13)/Desktop/MPP/R2/final_project-fuentes-garcia"
 setwd(wd)
 
 ###################################
@@ -84,28 +84,45 @@ sapply(presidents, function(x) sum(is.na(x)))
 
 #Select important variables
 pres_margin <- presidents %>%
-  select(year, state, state_po, candidatevotes, 
-         totalvotes, party_simplified) %>%
+  select(-c(state_fips, state_cen, state_ic, office, writein, version)) %>%
   mutate(margin = round(candidatevotes / totalvotes, 3) * 100)
-  
 
+#Include dummy for candidate that won that election by year and state
+win <- pres_margin %>%
+  group_by(year, state_po) %>%
+  mutate(candidate_win = ifelse(margin == max(margin), 1, 0)) %>%
+  ungroup()
+
+#GEometry  
 states_sf <- get_urbn_map("states", sf = TRUE)
 
-states_sf %>% 
-  ggplot(aes()) +
-  geom_sf(fill = "grey", color = "#ffffff")
-
-spatial_data <- left_join(states_sf, pres_margin,
+#Join dataframes
+spatial_data <- left_join(states_sf, win,
                           by = c("state_abbv" = "state_po"))
 
-#spatial_data %>%
-#  filter(year == 2020 & party_simplified == "REPUBLICAN") %>%
-#  ggplot() +
-#  geom_sf(mapping = aes(fill = margin),
-#          color = "#ffffff", size = 0.25) +
-#  labs(fill = "")
+saveRDS(spatial_data, file = "panel_elections.RDS")
+
+party_colors <- c("blue", "red")
 
 
+spatial_data %>%
+  filter(year == 2020 & candidate_win == 1) %>%
+  ggplot() +
+  geom_sf(mapping = aes(fill = margin),
+          color = "#ffffff", size = 0.25) +
+  labs(fill = "")
+
+
+p = ggplot(data = filter(spatial_data, year == 2020 & candidate_win == 1)) +
+  geom_sf(aes(fill = party_simplified)) +
+  geom_sf_text(aes(label = state_abbv), 
+               size = 2) +
+  labs(title = "Election Results 2020", x = NULL, y = NULL,
+       fill = NULL) +
+  theme_minimal()
+
+p1  = p + scale_color_manual(values = party_colors)  
+p1
 
 ###################################
 ### Plotting ######################
