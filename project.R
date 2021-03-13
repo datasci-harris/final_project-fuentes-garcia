@@ -15,9 +15,9 @@ library(spacyr)
 spacy_initialize()  # Please follow CRAN instructions: https://cran.r-project.org/web/packages/spacyr/readme/README.html
 
 # Victor
-#wd <- "C:/Users/fuent/OneDrive - The University of Chicago/Winter 2021/Data & Programming II - R/Project/final_project-fuentes-garcia"
+wd <- "C:/Users/fuent/OneDrive - The University of Chicago/Winter 2021/Data & Programming II - R/Project/final_project-fuentes-garcia"
 # Fernando
-wd <- "C:/Users/Nano/Dropbox/My PC (DellXPS13)/Desktop/MPP/R2/final_project-fuentes-garcia"
+#wd <- "C:/Users/Nano/Dropbox/My PC (DellXPS13)/Desktop/MPP/R2/final_project-fuentes-garcia"
 setwd(wd)
 
 ###################################
@@ -183,12 +183,13 @@ trump_sentiment <-
   left_join(tweets_df, by = "tweet_id") %>%
   filter(is_stop == FALSE, !pos == "PUNCT") %>%
   inner_join(sentiment_afinn, by = c("lemma" = "word")) %>%
-  mutate(week = as.Date(floor_date(date, unit = "week"))) %>%
+  mutate(date = as.Date(date),
+         week = floor_date(date, "weeks")) %>%
   group_by(week) %>%
   summarise(value = mean(sentiment, na.rm = TRUE)) %>%
   ungroup() %>%
-  mutate(subject = "Trump",
-         value = zoo::rollmean(value, k = 4, fill = NA, align = "right"))
+  mutate(subject = "Trump")
+
 
 remove(tweets, tweet, vec_tweet)
 
@@ -203,15 +204,100 @@ news_sentiment <-
   mutate(subject = "News")
 
 # Merging both sentiments
-
 sentiment_analysis <-
   rbind(trump_sentiment, news_sentiment) %>%
-  filter(week > ymd("2020-01-01")) %>%
+  filter(between(week, ymd("2018-01-01"), ymd("2020-11-30"))) %>%         # Keeping only last 3 years
   group_by(subject) %>%
-  mutate(scaled = scale(value))
+  mutate(scaled = scale(value),
+         scaled_smoothed = zoo::rollmean(scaled, k = 6,
+                                         fill = NA, align = "right")) %>%
+  ungroup()
 
-ggplot(sentiment_analysis, aes(x = week, y = scaled, color = subject, group = subject)) +
-  geom_line()
+# Creating Sentiment plot: Trump vs. US News
+sentiment_analysis_plot <-
+  ggplot(sentiment_analysis, aes(x = week, y = scaled_smoothed, color = subject, group = subject)) +
+  geom_hline(yintercept = 0, color = "grey70", size = 1) +
+  geom_line(size = 1.0) + 
+  annotate(geom = "text",                                                                # Trump legend
+           x = as.Date("2018-10-07"), y = 1.3, color = "red", fontface = "bold",  
+           label = "Trump", hjust = "center", vjust = "right") +
+  annotate(geom = "text",
+           x = as.Date("2019-05-07"), y = 0.95, color = "blue", fontface = "bold",       # US News legend
+           label = "US News", hjust = "center", vjust = "right") +
+  annotate(geom = "curve",                                                               # Adding Flags
+           x = as.Date("2020-01-30"), y = 0, xend = as.Date("2020-01-01"), yend = -1,
+           curvature = .3, arrow = arrow(length = unit(2, "mm"))) +
+  annotate(geom = "text",
+           x = as.Date("2020-01-01"), y = -1,
+           label = "JAN.30\nThe WHO declared\na global health nemergency", hjust = "center", vjust = "right") +
+  annotate(geom = "curve",
+           x = as.Date("2020-03-15"), y = 0, xend = as.Date("2020-03-01"), yend = 1.1,
+           curvature = .3, arrow = arrow(length = unit(2, "mm"))) +
+  annotate(geom = "text",
+           x = as.Date("2020-03-01"), y = 1.1,
+           label = "MAR.15\nCDC recommended\nno gatherings of 50+ people", hjust = "center", vjust = "left") +
+  annotate(geom = "curve",
+           x = as.Date("2020-03-26"), y = 0, xend = as.Date("2020-04-28"), yend = -0.5,
+           curvature = .3, arrow = arrow(length = unit(2, "mm"))) +
+  annotate(geom = "text",
+           x = as.Date("2020-04-28"), y = -0.5,
+           label = "MAR.26\nUSA led the world\nin confirmed\ncases: 81k", hjust = "center", vjust = "right") +
+  annotate(geom = "curve",
+           x = as.Date("2020-05-27"), y = 0, xend = as.Date("2020-05-30"), yend = 1.5,
+           curvature = .3, arrow = arrow(length = unit(2, "mm"))) +
+  annotate(geom = "text",
+           x = as.Date("2020-05-30"), y = 1.5,
+           label = "MAY.27\nCOVID-19 deaths\nin the US\npassed 100k", hjust = "center", vjust = "left") +
+  annotate(geom = "curve",
+           x = as.Date("2020-06-01"), y = 0, xend = as.Date("2020-08-30"), yend = 1.5,
+           curvature = .3, arrow = arrow(length = unit(2, "mm"))) +
+  annotate(geom = "text",
+           x = as.Date("2020-08-30"), y = 1.5,
+           label = "MAY/JUN.\nBlack Lives\nMatters protests", hjust = "center", vjust = "left") +
+  annotate(geom = "curve",
+           x = as.Date("2020-07-13"), y = 0, xend = as.Date("2020-07-07"), yend = -0.6,
+           curvature = .3, arrow = arrow(length = unit(2, "mm"))) +
+  annotate(geom = "text",
+           x = as.Date("2020-07-07"), y = -0.6,
+           label = "JUL.13\n5M+ Americans\nlost health insurance\ndue to job losses", hjust = "center", vjust = "right") +
+  annotate(geom = "curve",
+           x = as.Date("2020-08-01"), y = 0, xend = as.Date("2020-09-15"), yend = -0.2,
+           curvature = -.3, arrow = arrow(length = unit(2, "mm"))) +
+  annotate(geom = "text",
+           x = as.Date("2020-09-15"), y = -0.2,
+           label = "AUG.1\nOnly in July\nthe USA recorded\n1.9M new\ncases", hjust = "center", vjust = "right") +
+  annotate(geom = "curve",
+           x = as.Date("2020-11-03"), y = 0, xend = as.Date("2020-10-30"), yend = 1.5,
+           curvature = .3, arrow = arrow(length = unit(2, "mm"))) +
+  annotate(geom = "text",
+           x = as.Date("2020-10-30"), y = 1.5,
+           label = "NOV.3\nPresidential\nElections", hjust = "center", vjust = "left") +
+  scale_color_manual(values = c("blue", "red")) +
+  scale_y_continuous(limits = c(-2.5, 2.0), breaks = seq(-2.5, 2.0, 0.5)) +
+  scale_x_date(date_breaks = "2 months",
+               date_labels = format("%b-%Y"),
+               limits = as.Date(c("2018-01-01","2020-11-30")),
+               expand = c(0,0)) +
+  labs(x = "", color = "", y = "Sentiment (scaled and smoothed)*",
+       title    = "Trump lost the track of reality during COVID-19",
+       subtitle = "Sentiment Analysis: Trump's tweets vs. 16 Major US News, Jan 2018 - Nov 2020",
+       caption  = paste0("Source: Trump's tweets copiled by TheTrumpArchive.com. Sentiment calculated by Authors.",
+                         "News' Sentiment calculated by Federal Reserve Bank of San Francisco.\n",
+                         "Timeline flags from New York Times: A timeline of the Coronavirus Pandemic.\n",
+                         "*Scale to mean = 0. Smoothness through rolling average 6 weeks.")) +
+  theme_bw() + 
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        axis.text = element_text(size = 10, face="bold", colour = "black"),
+        axis.title = element_text(size = 13, face="bold", colour = "black"),
+        plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 14, hjust = 0.5))
+
+## -- News flags from The New York Times
+## -- More details: https://www.nytimes.com/article/coronavirus-timeline.html
+
+# Saving plot
+ggsave("sentiment_analysis_plot.png", sentiment_analysis_plot, width = 20, height = 8.7)
 
 ###################################
 ### Analysis ######################
