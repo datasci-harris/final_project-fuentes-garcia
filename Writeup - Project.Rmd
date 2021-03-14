@@ -1,0 +1,26 @@
+---
+title: "The Impact of COVID-19 in 2020 US Presidential Elections"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+Why?
+
+# Data & Methodology
+
+Data
+
+# Approach
+
+How?
+
+# Discussion
+
+Analysis
+
+# Conclusions
