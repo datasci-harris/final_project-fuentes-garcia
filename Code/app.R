@@ -1,11 +1,5 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+rm(list=ls())
+options(scipen = 10^6, digits=2)
 
 library(shiny)
 library(tidyverse)
@@ -16,22 +10,20 @@ library(rsconnect)
 library(plotly)
 library(scales)
 
+# Victor
+#wd <- "C:/Users/fuent/OneDrive - The University of Chicago/Winter 2021/Data & Programming II - R/Project/final_project-fuentes-garcia"
 # Fernando
 wd <- "C:/Users/Nano/Dropbox/My PC (DellXPS13)/Desktop/MPP/R2/final_project-fuentes-garcia"
 setwd(wd)
 
 
-rsconnect::setAccountInfo(name='nanojgarcia', 
-                          token='3D27515E9473E538F46606D5C46EA075', 
-                          secret='C9pgrbt7XyTYjYnS3rhH1W89XhFro9VxZMgpDBZ/')
-
-#rsconnect::deployApp('path/to/your/app')
-
-rm(list = ls())
+setAccountInfo(name='nanojgarcia', 
+               token='3D27515E9473E538F46606D5C46EA075', 
+               secret='C9pgrbt7XyTYjYnS3rhH1W89XhFro9VxZMgpDBZ/')
 
 spatial_df <- readRDS("panel_elections.RDS")
 
-# Define UI for application that draws a histogram
+# Define UI 
 ui <- fluidPage(theme = shinytheme("flatly"),
                 
                 # Application title
@@ -52,7 +44,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                 )
 )
 
-# Define server logic required to draw a histogram
+# Define server 
 server <- function(input, output) {
     df <- filter(spatial_df, candidate_win == 1)
     party_colors <- c("#2E74C0", "#CB454A")
@@ -90,7 +82,5 @@ server <- function(input, output) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-
-
 
 #https://nanojgarcia.shinyapps.io/Covid19/
