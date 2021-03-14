@@ -11,6 +11,7 @@ library(sf)
 library(urbnmapr)   # Please use devtools::install_github("UrbanInstitute/urbnmapr")
 library(reticulate)
 library(spacyr)
+library(rvest)
 spacy_initialize()  # Please follow CRAN instructions: https://cran.r-project.org/web/packages/spacyr/readme/README.html
 
 # Victor
@@ -70,21 +71,18 @@ if (!file.exists("AFINN-en-165.txt"))
   download.file("https://raw.githubusercontent.com/fnielsen/afinn/master/afinn/data/AFINN-en-165.txt",
                 destfile = "AFINN-en-165.txt", mode = "wb")
 
+
 ###################################
 ### Data Wrangling ################
 ###################################
 
 
 presidents <- read_csv("1976-2020-president.csv")
-glimpse(presidents)
-
-#NAs
-
-sapply(presidents, function(x) sum(is.na(x)))
+#glimpse(presidents)
 
 #Select important variables
 pres_margin <- presidents %>%
-  select(-c(state_fips, state_cen, state_ic, office, writein, version)) %>%
+  select(-c(state_fips, state_cen, state_ic, office, writein, version, notes)) %>%
   mutate(margin = round(candidatevotes / totalvotes, 3) * 100)
 
 #Include dummy for candidate that won that election by year and state
@@ -93,36 +91,55 @@ win <- pres_margin %>%
   mutate(candidate_win = ifelse(margin == max(margin), 1, 0)) %>%
   ungroup()
 
-#GEometry  
+#Geometry  
 states_sf <- get_urbn_map("states", sf = TRUE)
 
 #Join dataframes
 spatial_data <- left_join(states_sf, win,
                           by = c("state_abbv" = "state_po"))
 
-saveRDS(spatial_data, file = "panel_elections.RDS")
-
-party_colors <- c("blue", "red")
-
-
 spatial_data %>%
-  filter(year == 2020 & candidate_win == 1) %>%
-  ggplot() +
-  geom_sf(mapping = aes(fill = margin),
-          color = "#ffffff", size = 0.25) +
-  labs(fill = "")
+  filter(is.na(candidate))
 
 
-p = ggplot(data = filter(spatial_data, year == 2020 & candidate_win == 1)) +
-  geom_sf(aes(fill = party_simplified)) +
-  geom_sf_text(aes(label = state_abbv), 
-               size = 2) +
-  labs(title = "Election Results 2020", x = NULL, y = NULL,
-       fill = NULL) +
-  theme_minimal()
+#Web scrapping for electoral votes by year
+baseurl <- "https://www.archives.gov/electoral-college/"
+year <- seq(1976, 2020, by = 4)
 
-p1  = p + scale_color_manual(values = party_colors)  
-p1
+url_all <- vector("double", length(year))
+names(url_all) <- year
+for(i in 1:length(year)){
+  url_all[i] <- paste0(baseurl, year[i]) 
+}
+
+get <- function(url){
+  request <- read_html(url)
+  table <- html_table(request, fill = TRUE)
+  ev <- table[[2]][2:53,1:2]
+  ev[, 1] <- str_replace_all(ev[, 1], "\\*+", "")
+  ev[, 1] <- str_replace_all(ev[, 1], " $", "")
+  colnames(ev) <- c("state_name", "electoral_votes")  
+  return(ev)
+} 
+
+df <- bind_rows(map(url_all, get), .id = "column_label")
+df$column_label <- as.double(df$column_label)
+df <- df %>%
+  filter(state_name != "Total")
+
+#Join spatial data with the electoral votes 
+spatial_df <- left_join(spatial_data, df, 
+                        by = c("state_name", "year" = "column_label"))
+
+sapply(spatial_df, function(x) sum(is.na(x)))
+
+spatial_df <- spatial_df %>%
+  filter(!is.na(candidate))
+
+spatial_df[spatial_df$candidate == "MITT, ROMNEY", ] <- spatial_df[spatial_df$candidate == "ROMNEY, MITT", ]
+
+saveRDS(spatial_df, file = "panel_elections.RDS")
+
 
 ###################################
 ### Plotting ######################
