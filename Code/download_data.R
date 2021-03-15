@@ -44,8 +44,7 @@ if (!file.exists(file.path("Input", "1976-2020-electoral-college.csv"))){
     request <- read_html(url)
     table <- html_table(request, fill = TRUE)
     ev <- table[[2]][2:53,1:2]
-    ev[, 1] <- str_replace_all(ev[, 1], "\\*+", "")
-    ev[, 1] <- str_replace_all(ev[, 1], " $", "")
+    ev[, 1] <- str_replace_all(ev[, 1], c("\\*+" = "", " $" = ""))
     colnames(ev) <- c("state_name", "electoral_votes")  
     return(ev)
     } 
