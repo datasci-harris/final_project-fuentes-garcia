@@ -191,7 +191,7 @@ covid_deaths <-
   mutate(deaths_per100k = deaths / pop * 100000) %>%
   select(GEOID, deaths_per100k)
 
-# Loading Community Mobility data by county
+# Loading Community Mobility data to Work places by county
 # -> X-var: Change in community mobility between cases/deaths peak and baseline (double)
 # --------- Baseline     : 30 days mean centered in late February
 # --------- Deaths' Peak : 30 days mean centered in mid April
@@ -209,12 +209,12 @@ mobility_data <-
   summarise(work_mobility = mean(workplaces_percent_change_from_baseline, na.rm = TRUE)) %>%
   ungroup() %>%
   pivot_wider(id_cols = GEOID, names_from = stage, values_from = work_mobility) %>%
-  mutate(mobility_work_deaths_pike = deaths_peak - baseline,        # Calculating difference in mobility Deaths' Peak vs. Baseline
-         mobility_work_cases_pike = cases_peak - baseline) %>%      # Calculating difference in mobility Cases'  Peak vs. Baseline
+  mutate(mobility_deaths_peak = deaths_peak - baseline,        # Calculating difference in mobility Deaths' Peak vs. Baseline
+         mobility_cases_peak = cases_peak - baseline) %>%      # Calculating difference in mobility Cases'  Peak vs. Baseline
   select(GEOID, starts_with("mobility"))
 
 
-# Construting master dataset containg Y-variable and the set of constructed X-variables
+# Constructing master dataset including Y-variable and the set of constructed X-variables
 election_2020_county <-
   left_join(results_2020, population, "GEOID") %>%
   left_join(sex, "GEOID") %>%
