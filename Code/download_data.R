@@ -31,7 +31,7 @@ if (!file.exists(file.path("Input", "1976-2020-president.csv")))
 if (!file.exists(file.path("Input", "1976-2020-electoral-college.csv"))){
   
   baseurl <- "https://www.archives.gov/electoral-college/"
-  year <- seq(1976, 2020, by = 4)
+  year    <- seq(1976, 2020, by = 4)
 
   url_all <- vector("double", length(year))
   names(url_all) <- year
@@ -76,12 +76,10 @@ if (!file.exists(file.path("Input", "census_data.csv"))) {
 
   vars <-                                   # List of Variables
     c(
-      #paste0("B17002_00", 1:9),             # Income Poverty Rate
-      "B20018_001",                          # Earnings
       "B19013_001",                          # MHI
       "B19083_001",                          # Gini Index
       "B05002_001", "B05002_013",            # Foreign Born
-      "B03002_003", "B03002_003",            # Non-Hispanic White / Non-Hispanic Black
+      "B03002_001", "B03002_003", "B03002_004",             # Total Population, Non-Hispanic White, Non-Hispanic Black
       paste0("B01001_0", str_pad(1:49, 2, "left", "0")),    # Population by gender by age group
       paste0("B15001_0", str_pad(1:83, 2, "left", "0")),    # Population 18+ by gender by educational attainment
       paste0("C27001A_0", str_pad(1:10, 2, "left", "0"))    # Population by health insurance by sex by age group
@@ -108,7 +106,7 @@ if (!file.exists(file.path("Input", "census_data.csv"))) {
 if (!file.exists(file.path("Input", "laus_data.csv"))) {
   bls_key  <- "e54e539aed6045f29dbc51133d1ad7fe"
   
-  counties <- unique(census_data$GEOID)
+  counties <- sort(unique(census_data$GEOID))
   seriesid <- c(paste("LAUCN", counties, "000000000", 4, sep = ""),   # Employed
                 paste("LAUCN", counties, "000000000", 5, sep = ""))   # Unemployed
   
@@ -117,22 +115,23 @@ if (!file.exists(file.path("Input", "laus_data.csv"))) {
   for (i in 1:( length(seriesid) / 50 + 1)) {
     
     start <- (i - 1) * 50 + 1
-    end   <- start + 50
+    end   <- start + 49
     
-    if (end >= length(seriesid))
-      end <- length(seriesid)
-    
-    payload  <- list("seriesid"  = seriesid[start:end],
-                     "startyear" = 2019,
-                     "endyear"   = 2020,
-                     "registrationKey" = bls_key)
-    
-    list_laus[[i]] <- blsAPI(payload, api_version = 2, return_data_frame = TRUE)
-    
-    if (i %% 50 == 0)
-      Sys.sleep(10)         # Waiting time due to API rules
-    
-    cat("Retrieving:", paste0(end / length(seriesid) * 100, "%"), "\n")
+     if (end >= length(seriesid))
+       end <- length(seriesid)
+     
+     payload  <- list("seriesid"  = seriesid[start:end],
+                      "startyear" = 2019,
+                      "endyear"   = 2020,
+                      "registrationKey" = bls_key)
+     
+     list_laus[[i]] <- blsAPI(payload, api_version = 2, return_data_frame = TRUE)
+     
+     if (i %% 50 == 0)       # After 50 requests proceeds
+       Sys.sleep(15)         # A waiting time due to API rule
+     
+     cat("Retrieving:", paste0(end / length(seriesid) * 100, "%"), "\n")
+     
   }
   
   laus_data <- do.call("rbind", list_laus)
@@ -140,7 +139,7 @@ if (!file.exists(file.path("Input", "laus_data.csv"))) {
   write_csv(laus_data, file.path("Input", "laus_data.csv"))
 }
 
-# 6 -- COVID-19 Cases and Deaths by county and day 
+# 6 -- COVID-19 Cases by county and day 
 #   -- Data set from CSSE at Johns Hopkins University
 #   -- More details: https://github.com/CSSEGISandData
 
@@ -148,11 +147,15 @@ if (!file.exists(file.path("Input", "time_series_covid19_confirmed_US.csv")))
   download.file("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv",
                 destfile = file.path("Input","time_series_covid19_confirmed_US.csv"), mode = "wb")
 
+# 7 -- COVID-19 Deaths by county and day 
+#   -- Data set from CSSE at Johns Hopkins University
+#   -- More details: https://github.com/CSSEGISandData
+
 if (!file.exists(file.path("Input", "time_series_covid19_deaths_US.csv")))
-  download.file("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv",
+  download.file("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv",
                 destfile = file.path("Input","time_series_covid19_deaths_US.csv"), mode = "wb")
 
-# 7 -- Social Mobility by county and day
+# 8 -- Social Mobility by county and day
 #   -- Data set from Google Community Mobility Reports
 #   -- More details: https://www.google.com/covid19/mobility/
 
@@ -160,7 +163,7 @@ if (!file.exists(file.path("Input", "Region_Mobility_Report_CSVs.zip")))
   download.file("https://www.gstatic.com/covid19/mobility/Region_Mobility_Report_CSVs.zip",
                 destfile = file.path("Input","Region_Mobility_Report_CSVs.zip"))
 
-# 8 -- 1980-2020 News Sentiment Analysis
+# 9 -- 1980-2020 News Sentiment Analysis
 #   -- Data set from Federal Reserve Bank of San Francisco
 #   -- More details: https://www.frbsf.org/economic-research/indicators-data/daily-news-sentiment-index/
 
@@ -168,7 +171,7 @@ if (!file.exists(file.path("Input", "news_sentiment_data.xlsx")))
   download.file("https://raw.githubusercontent.com/tonmcg/US_County_Level_Election_Results_08-20/master/2020_US_County_Level_Presidential_Results.csv",
                 destfile = file.path("Input", "news_sentiment_data.xlsx"), mode = "wb")
 
-# 9 -- Trump's Tweets from 2009 to 2021
+# 10 - Trump's Tweets from 2009 to 2021
 #   -- Downloaded file from https://www.thetrumparchive.com/
 #   -- The FAQ section provides the following Google Drive link
 #   -- https://drive.google.com/file/d/16wm-2NTKohhcA26w-kaWfhLIGwl_oX95/view
@@ -176,7 +179,7 @@ if (!file.exists(file.path("Input", "news_sentiment_data.xlsx")))
 if (!file.exists(file.path("Input", "tweets_01-08-2021.json")))
   cat("File tweets_01-08-2021.json needed but absent")
 
-# 10 - AFINN lexicon: New English AFINN wordlist
+# 11 - AFINN lexicon: New English AFINN wordlist
 #   -- More details: https://github.com/fnielsen/afinn/tree/master/afinn/data
 
 if (!file.exists(file.path("Input", "AFINN-en-165.txt")))
