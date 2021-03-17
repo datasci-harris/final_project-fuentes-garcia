@@ -149,7 +149,9 @@ med_delta_unemp <- median(spatial_20$delta_unemployment, na.rm = T) * 100
 med_gop_margin  <- median(spatial_20$gop_margin, na.rm = T) * 100
 
 gop_margin_vs_delta_unemployment_scatter <-
-  ggplot(spatial_20, aes(x = delta_unemployment * 100, y = gop_margin * 100, size = total_votes / 10^6)) +
+  spatial_20 %>%
+  select(delta_unemployment, gop_margin, total_votes) %>%
+  ggplot(aes(x = delta_unemployment * 100, y = gop_margin * 100, size = total_votes / 10^6)) +
   geom_point(
     shape = 21,
     color = "gray30",
@@ -175,3 +177,8 @@ gop_margin_vs_delta_unemployment_scatter <-
 
 # Saving plot
 ggsave(file.path("Output","gop_margin_vs_delta_unemployment_scatter.png"), gop_margin_vs_delta_unemployment_scatter, width = 8, height = 8)
+
+
+## Saving objects
+saveRDS(list(margin = margin_2020_map,
+             delta = deltaUn_2020_map), file = file.path("Intermediate","PlotsToShiny.rds"))

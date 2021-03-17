@@ -23,34 +23,44 @@ setAccountInfo(name = 'nanojgarcia',
                token = '3D27515E9473E538F46606D5C46EA075', 
                secret = 'C9pgrbt7XyTYjYnS3rhH1W89XhFro9VxZMgpDBZ/')
 
+
 panel_elections <- read_csv(file.path("Intermediate","1976-2020_panel_elections.csv"))
 states_sf <- get_urbn_map("states", sf = TRUE)
 
+Plots <- readRDS(file.path("Intermediate","PlotsToShiny.rds"))
+
 # Define UI 
 ui <- fluidPage(
-    theme = shinytheme("flatly"),
-    
-    # Application title
-    titlePanel("US Presidential Electoral Results by State, 1976 - 2020"),
-    
-    fluidRow(
-        column(4,
-               sliderInput(inputId = "date", 
-                           label = "Choose an election year",
-                           min = min(panel_elections$year),
-                           max = max(panel_elections$year),
-                           step = 4,
-                           value = max(panel_elections$year),
-                           animate = animationOptions(interval = 4900))
-               ),
-        
-        column(6, htmlOutput("candidates")
+  theme = shinytheme("flatly"),
+  navbarPage(
+    "The Impact of COVID-19 on 2020 Presidential Elections",
+    tabPanel(
+      "1976-2020 Results by State",
+      mainPanel(
+        fluidRow(
+          column(
+            4,
+            sliderInput(
+              inputId = "date",
+              label = h3("Choose an election year"),
+              min = min(panel_elections$year),
+              max = max(panel_elections$year),
+              step = 4,
+              sep = "",
+              value = max(panel_elections$year))
+            
+          ),
+          column(
+            8,
+            htmlOutput("candidates")
+          )
         ),
-        
-        # Show a map of us elections
-        mainPanel(width = 11, plotlyOutput("elections")
-                  )
+        fluidRow(
+          plotlyOutput("elections")
         )
+      )
+    )
+  )
 )
 
 # Define server 
@@ -71,7 +81,7 @@ server <- function(input, output) {
                 states_sf %>%
                     left_join(df(), by = c("state_abbv" = "state_lab")) %>%
                     ggplot() +
-                    geom_sf(aes(fill = party), color = "white", size = 0.5) +
+                    geom_sf(aes(fill = party), color = "grey55", size = 0.25) +
                     geom_sf_text(aes(label = paste(state_abbv, "\n", electoral_votes)), 
                                  size = 2)+
                     scale_fill_manual(values = party_colors) + 
@@ -81,12 +91,14 @@ server <- function(input, output) {
                           panel.background = element_blank(),
                           axis.title = element_blank(),
                           axis.text = element_blank(),
-                          panel.grid = element_blank(),
-                          plot.title = element_text(hjust = 0.5)),
-                tooltip = c("state", "party", "votes")
+                          panel.grid = element_blank()),
+                tooltip = c("state", "party", "votes"),
+                height = 400
                 ) %>%
-                layout(title = year_title) %>%
-                highlight("plotly_selected")
+                layout(title = list(text = paste("Year:",year_title),
+                                    y = 0.95)) %>%
+                highlight(
+                    on = 'plotly_hover', persistent = FALSE, opacityDim = getOption("opacityDim", .1))
             })
     
     output$candidates <-
@@ -103,6 +115,8 @@ server <- function(input, output) {
                 kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
                 add_header_above(c(" " = 1, " " = 1, "Votes" = 2))
     )
+    
+    
 }
 
 # Run the application 
