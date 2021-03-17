@@ -168,7 +168,7 @@ if (!file.exists(file.path("Input", "Region_Mobility_Report_CSVs.zip")))
 #   -- More details: https://www.frbsf.org/economic-research/indicators-data/daily-news-sentiment-index/
 
 if (!file.exists(file.path("Input", "news_sentiment_data.xlsx")))
-  download.file("https://raw.githubusercontent.com/tonmcg/US_County_Level_Election_Results_08-20/master/2020_US_County_Level_Presidential_Results.csv",
+  download.file("https://www.frbsf.org/economic-research/indicators-data/daily-news-sentiment-index/files/news_sentiment_data.xlsx",
                 destfile = file.path("Input", "news_sentiment_data.xlsx"), mode = "wb")
 
 # 10 - Trump's Tweets from 2009 to 2021

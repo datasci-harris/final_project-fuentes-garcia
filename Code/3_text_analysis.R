@@ -85,7 +85,7 @@ trump_sentiment <-
 
 # Sentiment of 16 major US newspapers
 news_sentiment <-
-  readxl::read_excel("news_sentiment_data.xlsx", sheet = "Data") %>%
+  readxl::read_excel(file.path("Input","news_sentiment_data.xlsx"), sheet = "Data") %>%
   mutate(week = floor_date(ymd(date), unit = "weeks")) %>%
   rename(sentiment = `News Sentiment`) %>%
   group_by(week) %>%
@@ -169,7 +169,7 @@ sentiment_analysis_plot <-
                limits = as.Date(c("2018-01-01","2020-11-30")),
                expand = c(0,0)) +
   labs(x = "", color = "", y = "Sentiment (scaled and smoothed)*",
-       title    = "Trump lost the track of reality during COVID-19",
+       title    = "Trump sentiment got disconneted from News' sentiment during COVID-19",
        subtitle = "Sentiment Analysis: Trump's tweets vs. 16 Major US News, Jan 2018 - Nov 2020",
        caption  = paste0("Source: Trump's tweets copiled by TheTrumpArchive.com. Sentiment calculated by Authors.",
                          "News' Sentiment calculated by Federal Reserve Bank of San Francisco.\n",
