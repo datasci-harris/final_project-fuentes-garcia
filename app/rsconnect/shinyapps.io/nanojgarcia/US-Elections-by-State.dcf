@@ -1,0 +1,12 @@
+name: US-Elections-by-State
+title: US-Elections-by-State
+username:
+account: nanojgarcia
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3811703
+bundleId: 4361274
+url: https://nanojgarcia.shinyapps.io/US-Elections-by-State/
+when: 1616030691.60672
+asMultiple: FALSE
+asStatic: FALSE
