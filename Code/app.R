@@ -18,7 +18,6 @@ wd <- "C:/Users/fuent/OneDrive - The University of Chicago/Winter 2021/Data & Pr
 #wd <- "C:/Users/Nano/Dropbox/My PC (DellXPS13)/Desktop/MPP/R2/final_project-fuentes-garcia"
 setwd(wd)
 
-
 setAccountInfo(name = 'nanojgarcia', 
                token = '3D27515E9473E538F46606D5C46EA075', 
                secret = 'C9pgrbt7XyTYjYnS3rhH1W89XhFro9VxZMgpDBZ/')
