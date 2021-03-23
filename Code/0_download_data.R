@@ -6,6 +6,13 @@ library(tidycensus)
 library(blsAPI)
 library(jsonlite)
 
+#Grade comments
+# - Nice use of file.exists
+# - Good use of functions with web scraping
+# - Good commenting
+# - Advanced use in both analysis and text processing
+# - Nice looking plots
+
 # Victor
 wd <- "C:/Users/fuent/OneDrive - The University of Chicago/Winter 2021/Data & Programming II - R/Project/final_project-fuentes-garcia"
 # Fernando
